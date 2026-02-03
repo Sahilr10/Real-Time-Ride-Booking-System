@@ -20,8 +20,15 @@ app.use(cookieParser());
 
 //import routes
 import userRouter from "./routes/user.router.js";
+import captainRouter from "./routes/captain.router.js";
 
 //use routes
 app.use("/api/v1/users", userRouter);
+app.use("/api/v1/captains", captainRouter);
+
+//health check route
+app.get("/api/v1/health-check", (req, res) => {
+  res.status(200).json({ status: "success", message: "API is working!" });
+});
 
 export { app };

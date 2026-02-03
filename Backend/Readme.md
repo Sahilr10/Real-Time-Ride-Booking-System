@@ -167,18 +167,22 @@ curl -X POST http://localhost:8000/api/v1/users/login \
 ## Users API — Profile Endpoint
 
 ### Endpoint
+
 - URL: `/api/v1/users/profile`
 - Method: `GET`
 - Auth: Required (accessToken)
 
 ### Description
+
 Fetch the authenticated user's profile. Response excludes `password` and `refreshToken`.
 
 ### Request Headers
+
 - `Authorization: Bearer <accessToken>` (or send cookie `accessToken`)
 
 ### Responses
-- 200 OK  
+
+- 200 OK
   - Body (example):
   ```json
   {
@@ -199,6 +203,7 @@ Fetch the authenticated user's profile. Response excludes `password` and `refres
 - 500 Internal Server Error — server error
 
 ### Example cURL
+
 ```bash
 curl -X GET http://localhost:8000/api/v1/users/profile \
   -H "Authorization: Bearer <accessToken>"
@@ -207,18 +212,22 @@ curl -X GET http://localhost:8000/api/v1/users/profile \
 ## Users API — Logout Endpoint
 
 ### Endpoint
+
 - URL: `/api/v1/users/logout`
 - Method: `POST`
 - Auth: Required (accessToken)
 
 ### Description
+
 Logs out the authenticated user by clearing `accessToken` and `refreshToken` cookies and removing the stored refresh token from the database.
 
 ### Request Headers
+
 - `Authorization: Bearer <accessToken>` (or send cookie `accessToken`)
 
 ### Responses
-- 200 OK  
+
+- 200 OK
   - Body (example):
   ```json
   {
@@ -232,6 +241,7 @@ Logs out the authenticated user by clearing `accessToken` and `refreshToken` coo
 - 500 Internal Server Error — server error
 
 ### Example cURL
+
 ```bash
 curl -X POST http://localhost:8000/api/v1/users/logout \
   -H "Authorization: Bearer <accessToken>"
@@ -240,27 +250,33 @@ curl -X POST http://localhost:8000/api/v1/users/logout \
 ## Users API — Refresh Access Token Endpoint
 
 ### Endpoint
+
 - URL: `/api/v1/users/refresh-token`
 - Method: `POST`
 - Auth: None (uses refresh token)
 
 ### Description
+
 Accepts a refresh token (from cookie `refreshToken` or request body) and issues new `accessToken` and `refreshToken`. New tokens are saved and sent back in cookies (`httpOnly`, `secure`) and in the response body.
 
 ### Request Headers
+
 - `Content-Type: application/json` (if sending token in body)
 - or send cookie: `refreshToken=<token>`
 
 ### Request Body (optional)
+
 - `refreshToken` (string) — optional if token is sent in cookie
 
 Example:
+
 ```json
 { "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." }
 ```
 
 ### Responses
-- 200 OK  
+
+- 200 OK
   - Body (example):
   ```json
   {
@@ -272,20 +288,109 @@ Example:
     "message": "Access token refreshed successfully"
   }
   ```
+
   - Cookies set: `accessToken`, `refreshToken` (httpOnly, secure)
 - 401 Unauthorized — missing refresh token or invalid/expired token
 - 404 Not Found — user associated with token not found
 - 500 Internal Server Error — server error / token generation failed
 
 ### Example cURL (using cookie)
+
 ```bash
 curl -X POST http://localhost:8000/api/v1/users/refresh-token \
   --cookie "refreshToken=<refreshToken>"
 ```
 
 ### Example cURL (using JSON body)
+
 ```bash
 curl -X POST http://localhost:8000/api/v1/users/refresh-token \
   -H "Content-Type: application/json" \
   -d '{"refreshToken":"<refreshToken>"}'
+```
+
+## Captains API — Register Endpoint
+
+### Endpoint
+
+- URL: `/api/v1/captains/register`
+- Method: `POST`
+- Auth: None
+
+### Description
+
+Create a new captain account and register their vehicle. Validates required fields, ensures email/username/vehicle plate uniqueness, hashes password before storing, and returns the created captain object (password and refreshToken excluded).
+
+### Request Headers
+
+- `Content-Type: application/json`
+
+### Request Body
+
+- `fullName` (string) — required
+- `email` (string) — required, unique
+- `username` (string) — required, unique; stored lowercase
+- `password` (string) — required
+- `vehicle` (object) — required
+  - `plate` (string) — required, unique
+  - other vehicle fields (optional): `model`, `color`, etc.
+
+Example:
+
+```json
+{
+  "fullName": "Jane Captain",
+  "email": "jane.captain@example.com",
+  "username": "janecaptain",
+  "password": "StrongPassword123",
+  "vehicle": {
+    "plate": "ABC-1234",
+    "model": "Toyota Prius",
+    "color": "White"
+  }
+}
+```
+
+### Responses
+
+- 201 Created
+  - Description: Captain created successfully
+  - Body (example):
+
+  ```json
+  {
+    "status": 200,
+    "data": {
+      "_id": "60f...abc",
+      "fullName": "Jane Captain",
+      "email": "jane.captain@example.com",
+      "username": "janecaptain",
+      "vehicle": {
+        "plate": "ABC-1234",
+        "model": "Toyota Prius",
+        "color": "White"
+      },
+      "createdAt": "2026-01-31T...",
+      "updatedAt": "2026-01-31T..."
+    },
+    "message": "Captain created successfully"
+  }
+  ```
+
+- 400 Bad Request
+  - Cause: Missing/empty required fields
+  - Message: `"All fields are required"`
+  - OR Cause: Email, username, or vehicle plate already in use
+  - Message: `"Email, Username or Vehicle Plate already in use"`
+
+- 500 Internal Server Error
+  - Cause: Server error during creation
+  - Message: `"Captain creation failed"`
+
+### Example cURL
+
+```bash
+curl -X POST http://localhost:8000/api/v1/captains/register \
+  -H "Content-Type: application/json" \
+  -d '{"fullName":"Jane Captain","email":"jane.captain@example.com","username":"janecaptain","password":"StrongPassword123","vehicle":{"plate":"ABC-1234","model":"Toyota Prius","color":"White"}}'
 ```
