@@ -278,6 +278,7 @@ Example:
 
 - 200 OK
   - Body (example):
+
   ```json
   {
     "status": 200,
@@ -290,6 +291,7 @@ Example:
   ```
 
   - Cookies set: `accessToken`, `refreshToken` (httpOnly, secure)
+
 - 401 Unauthorized — missing refresh token or invalid/expired token
 - 404 Not Found — user associated with token not found
 - 500 Internal Server Error — server error / token generation failed
@@ -393,4 +395,226 @@ Example:
 curl -X POST http://localhost:8000/api/v1/captains/register \
   -H "Content-Type: application/json" \
   -d '{"fullName":"Jane Captain","email":"jane.captain@example.com","username":"janecaptain","password":"StrongPassword123","vehicle":{"plate":"ABC-1234","model":"Toyota Prius","color":"White"}}'
+```
+
+## Captains API — Login Endpoint
+
+### Endpoint
+
+- URL: `/api/v1/captains/login`
+- Method: `POST`
+- Auth: None
+
+### Description
+
+Authenticate a captain using username or email and password. On success, sets `accessToken` and `refreshToken` cookies (httpOnly, secure) and returns the authenticated captain (password and refreshToken excluded) along with tokens.
+
+### Request Headers
+
+- `Content-Type: application/json`
+
+### Request Body
+
+- `username` (string) — required if `email` is not provided
+- `email` (string) — required if `username` is not provided
+- `password` (string) — required
+
+Example:
+
+```json
+{ "username": "janecaptain", "password": "StrongPassword123" }
+```
+
+### Responses
+
+- 200 OK
+  - Body (example):
+
+  ```json
+  {
+    "status": 200,
+    "data": {
+      "captain": {
+        "_id": "60f...abc",
+        "fullName": "Jane Captain",
+        "email": "jane.captain@example.com",
+        "username": "janecaptain",
+        "vehicle": {
+          "plate": "ABC-1234",
+          "model": "Toyota Prius",
+          "color": "White"
+        },
+        "createdAt": "2026-01-31T...",
+        "updatedAt": "2026-01-31T..."
+      },
+      "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    },
+    "message": "Captain logged in successfully"
+  }
+  ```
+
+  - Cookies set: `accessToken`, `refreshToken` (httpOnly, secure)
+
+- 400 Bad Request — missing both username and email
+- 401 Unauthorized — incorrect password
+- 404 Not Found — captain not found
+- 500 Internal Server Error — token generation or server error
+
+### Example cURL
+
+```bash
+curl -X POST http://localhost:8000/api/v1/captains/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"janecaptain","password":"StrongPassword123"}'
+```
+
+## Captains API — Profile Endpoint
+
+### Endpoint
+
+- URL: `/api/v1/captains/profile`
+- Method: `GET`
+- Auth: Required (accessToken)
+
+### Description
+
+Fetch the authenticated captain's profile. Response excludes `password` and `refreshToken`.
+
+### Request Headers
+
+- `Authorization: Bearer <accessToken>` (or send cookie `accessToken`)
+
+### Responses
+
+- 200 OK
+  - Body (example):
+  ```json
+  {
+    "status": 200,
+    "data": {
+      "_id": "60f...abc",
+      "fullName": "Jane Captain",
+      "email": "jane.captain@example.com",
+      "username": "janecaptain",
+      "vehicle": {
+        "plate": "ABC-1234",
+        "model": "Toyota Prius",
+        "color": "White"
+      },
+      "createdAt": "2026-01-31T...",
+      "updatedAt": "2026-01-31T..."
+    },
+    "message": "Captain profile fetched successfully"
+  }
+  ```
+- 401 Unauthorized — missing/invalid access token
+- 404 Not Found — captain not found
+- 500 Internal Server Error — server error
+
+### Example cURL
+
+```bash
+curl -X GET http://localhost:8000/api/v1/captains/profile \
+  -H "Authorization: Bearer <accessToken>"
+```
+
+## Captains API — Logout Endpoint
+
+### Endpoint
+
+- URL: `/api/v1/captains/logout`
+- Method: `POST`
+- Auth: Required (accessToken)
+
+### Description
+
+Logs out the authenticated captain by clearing `accessToken` and `refreshToken` cookies and removing the stored refresh token from the database.
+
+### Request Headers
+
+- `Authorization: Bearer <accessToken>` (or send cookie `accessToken`)
+
+### Responses
+
+- 200 OK
+  - Body (example):
+  ```json
+  {
+    "status": 200,
+    "data": {},
+    "message": "Logout successful"
+  }
+  ```
+- 401 Unauthorized — missing/invalid access token
+- 404 Not Found — captain not found
+- 500 Internal Server Error — server error
+
+### Example cURL
+
+```bash
+curl -X POST http://localhost:8000/api/v1/captains/logout \
+  -H "Authorization: Bearer <accessToken>"
+```
+
+## Captains API — Refresh Access Token Endpoint
+
+### Endpoint
+
+- URL: `/api/v1/captains/refresh-token`
+- Method: `POST`
+- Auth: None (uses refresh token)
+
+### Description
+
+Accepts a refresh token (from cookie `refreshToken` or request body) and issues new `accessToken` and `refreshToken`. New tokens are saved and sent back in cookies (`httpOnly`, `secure`) and in the response body.
+
+### Request Headers
+
+- `Content-Type: application/json` (if sending token in body)
+- or send cookie: `refreshToken=<token>`
+
+### Request Body (optional)
+
+- `refreshToken` (string) — optional if token is sent in cookie
+
+Example:
+
+```json
+{ "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." }
+```
+
+### Responses
+
+- 200 OK
+  - Body (example):
+  ```json
+  {
+    "status": 200,
+    "data": {
+      "accessToken": "newAccessToken...",
+      "refreshToken": "newRefreshToken..."
+    },
+    "message": "Access token refreshed successfully"
+  }
+  ```
+
+  - Cookies set: `accessToken`, `refreshToken` (httpOnly, secure)
+- 401 Unauthorized — missing refresh token or invalid/expired token
+- 404 Not Found — captain associated with token not found
+- 500 Internal Server Error — server error / token generation failed
+
+### Example cURL (using cookie)
+
+```bash
+curl -X POST http://localhost:8000/api/v1/captains/refresh-token \
+  --cookie "refreshToken=<refreshToken>"
+```
+
+### Example cURL (using JSON body)
+
+```bash
+curl -X POST http://localhost:8000/api/v1/captains/refresh-token \
+  -H "Content-Type: application/json" \
+  -d '{"refreshToken":"<refreshToken>"}'
 ```

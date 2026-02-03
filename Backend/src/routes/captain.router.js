@@ -1,7 +1,17 @@
 import { Router } from "express";
 import { validate } from "../middlewares/validator.middleware";
-import { captainRegisterValidator } from "../validators/index.js";
-import { registerCaptain } from "../controllers/captain.controller.js";
+import {
+  captainLoginValidator,
+  captainRegisterValidator,
+} from "../validators/index.js";
+import {
+  registerCaptain,
+  loginCaptain,
+  logoutCaptain,
+  refreshAccessToken,
+  getCaptainProfile,
+} from "../controllers/captain.controller.js";
+import { verifyJWTCaptain } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
@@ -9,5 +19,11 @@ const router = Router();
 router
   .route("/register")
   .post(captainRegisterValidator(), validate, registerCaptain);
+router.route("/login").post(captainLoginValidator(), validate, loginCaptain);
+router.route("/refresh-token").post(refreshAccessToken);
+
+//protected routes
+router.route("/profile").get(verifyJWTCaptain, getCaptainProfile);
+router.route("/logout").post(verifyJWTCaptain, logoutCaptain);
 
 export default router;
